@@ -1,0 +1,161 @@
+// SGV-ELLP — Modelagem do banco (Sprint 1) — PostgreSQL + Prisma
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ---------- Enums ----------
+
+enum PerfilUsuario {
+  ADMIN
+  COORDENADOR
+}
+
+// FSM: PENDENTE -> APROVADO -> ATIVO -> DESLIGADO
+// (PENDENTE também pode ir direto para DESLIGADO = rejeitado)
+enum StatusVoluntario {
+  PENDENTE
+  APROVADO
+  ATIVO
+  DESLIGADO
+}
+
+enum StatusOficina {
+  PLANEJADA
+  REALIZADA
+  CANCELADA
+}
+
+enum PapelParticipacao {
+  MINISTRANTE
+  APOIO
+}
+
+// ---------- Coordenadores (login do painel) ----------
+
+model Usuario {
+  id        String        @id @default(uuid())
+  nome      String
+  email     String        @unique
+  senhaHash String
+  perfil    PerfilUsuario @default(COORDENADOR)
+  ativo     Boolean       @default(true)
+  criadoEm  DateTime      @default(now())
+
+  transicoes StatusHistorico[]
+  termos     TermoVoluntariado[]
+}
+
+// ---------- Voluntários ----------
+
+model Voluntario {
+  id        String   @id @default(uuid())
+  nome      String
+  email     String   @unique
+  telefone  String?
+  ra        String?  @unique // RA do aluno, quando houver
+  curso     String?
+  periodo   Int?
+  interesses String[] // áreas/temas de interesse (match com oficinas)
+
+  status       StatusVoluntario @default(PENDENTE)
+  dataEntrada  DateTime? // preenchida ao ficar ATIVO
+  dataSaida    DateTime? // preenchida ao ficar DESLIGADO
+
+  // LGPD
+  consentimentoLgpd   Boolean  @default(false)
+  consentimentoEm     DateTime?
+
+  criadoEm     DateTime @default(now())
+  atualizadoEm DateTime @updatedAt
+
+  disponibilidades Disponibilidade[]
+  participacoes    Participacao[]
+  historico        StatusHistorico[]
+  termos           TermoVoluntariado[]
+
+  @@index([status])
+}
+
+model Disponibilidade {
+  id           String @id @default(uuid())
+  voluntarioId String
+  diaSemana    Int // 0=domingo ... 6=sábado
+  horaInicio   String // "HH:mm"
+  horaFim      String // "HH:mm"
+
+  voluntario Voluntario @relation(fields: [voluntarioId], references: [id], onDelete: Cascade)
+
+  @@index([voluntarioId, diaSemana])
+}
+
+// ---------- Oficinas ----------
+
+model Oficina {
+  id            String        @id @default(uuid())
+  tema          String
+  descricao     String?
+  data          DateTime
+  local         String
+  cargaHoraria  Float // em horas
+  status        StatusOficina @default(PLANEJADA)
+  criadoEm      DateTime      @default(now())
+
+  participacoes Participacao[]
+
+  @@index([data])
+}
+
+// ---------- Relação M:N Voluntário x Oficina (histórico) ----------
+
+model Participacao {
+  id           String            @id @default(uuid())
+  voluntarioId String
+  oficinaId    String
+  papel        PapelParticipacao @default(MINISTRANTE)
+  horasValidas Float // horas computadas (default = cargaHoraria da oficina)
+  criadoEm     DateTime          @default(now())
+
+  voluntario Voluntario @relation(fields: [voluntarioId], references: [id])
+  oficina    Oficina    @relation(fields: [oficinaId], references: [id])
+
+  @@unique([voluntarioId, oficinaId])
+  @@index([oficinaId])
+}
+
+// ---------- Auditoria da FSM (histórico inalterável: só INSERT) ----------
+
+model StatusHistorico {
+  id           String           @id @default(uuid())
+  voluntarioId String
+  de           StatusVoluntario
+  para         StatusVoluntario
+  usuarioId    String
+  observacao   String?
+  em           DateTime         @default(now())
+
+  voluntario Voluntario @relation(fields: [voluntarioId], references: [id])
+  usuario    Usuario    @relation(fields: [usuarioId], references: [id])
+
+  @@index([voluntarioId, em])
+}
+
+// ---------- Termos emitidos (validação por hash) ----------
+
+model TermoVoluntariado {
+  id            String   @id @default(uuid())
+  voluntarioId  String
+  geradoPorId   String
+  totalHoras    Float
+  hashValidacao String   @unique // SHA-256 do conteúdo; consulta pública de autenticidade
+  geradoEm      DateTime @default(now())
+
+  voluntario Voluntario @relation(fields: [voluntarioId], references: [id])
+  geradoPor  Usuario    @relation(fields: [geradoPorId], references: [id])
+
+  @@index([voluntarioId])
+}
