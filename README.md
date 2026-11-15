@@ -18,10 +18,12 @@ Sistema web para controlar e automatizar os processos administrativos dos volunt
 
 | Camada | Tecnologia |
 |---|---|
-| Front-end (Sprint 3) | React, Tailwind CSS |
-| Back-end | Node.js, Express, JWT |
+| Front-end | React, Vite, Tailwind CSS, React Router |
+| Back-end | Node.js, Express, JWT, bcrypt, zod |
+| PDF | PDFKit |
 | ORM | Prisma 6 |
 | Banco de dados | PostgreSQL 16 |
+| Testes | node:test (unitários e de integração) |
 | Ambiente | Docker, Git/GitHub |
 
 ## Status
@@ -29,10 +31,11 @@ Sistema web para controlar e automatizar os processos administrativos dos volunt
 | Item | Situação |
 |---|---|
 | Modelagem do banco (schema Prisma, 7 modelos) | Pronta |
-| Migration inicial aplicada | Pronta |
-| Servidor Express e API (usuários e JWT) | Em andamento (Sprint 2) |
-| Front-end React (todas as telas, integrado à API) | Em andamento (Sprint 3) |
-| Máquina de estados, filtros e PDF com hash | Sprint 4 |
+| API: login JWT, usuários, voluntários, oficinas, vínculos, termos e dashboard | Pronta |
+| Máquina de estados, filtros e PDF com hash | Pronta |
+| Front-end React (todas as telas, integrado à API) | Pronto |
+| Testes unitários e de integração | Prontos |
+| Deploy (Supabase, Render e Vercel) | Guia em [docs/DEPLOY.md](docs/DEPLOY.md) |
 
 ## Pré-requisitos
 
@@ -82,11 +85,26 @@ Sistema web para controlar e automatizar os processos administrativos dos volunt
    npm run dev
    ```
 
-7. (Opcional) Abra o Prisma Studio para ver as tabelas em http://localhost:5555:
+7. (Opcional) Carregue dados **fictícios** de demonstração (8 voluntários e 7 oficinas):
+
+   ```bash
+   npm run seed:demo
+   ```
+
+8. (Opcional) Abra o Prisma Studio para ver as tabelas em http://localhost:5555:
 
    ```bash
    npx prisma studio
    ```
+
+## Testes
+
+```bash
+npm test                  # unitários: máquina de estados, horas e hash (não usa banco)
+npm run test:integracao   # API completa contra um banco separado (sgv_ellp_teste)
+```
+
+Os testes de integração precisam do Docker ligado. Eles criam e limpam sozinhos o banco `sgv_ellp_teste` no mesmo servidor, sem tocar nos dados de desenvolvimento.
 
 ## Rotas da API
 
@@ -113,6 +131,12 @@ Sistema web para controlar e automatizar os processos administrativos dos volunt
 | POST | `/oficinas/:id/participacoes` | Logado | Vincula voluntário ATIVO (`voluntarioId`, `papel`, `horasValidas`) |
 | PATCH | `/oficinas/:id/participacoes/:participacaoId` | Logado | Ajusta papel ou horas válidas |
 | DELETE | `/oficinas/:id/participacoes/:participacaoId` | Logado | Remove o vínculo (só em oficina PLANEJADA) |
+| POST | `/termos` | Logado | Emite o termo de um voluntário (`voluntarioId`) com hash SHA-256 |
+| GET | `/termos` | Logado | Lista os termos emitidos (filtro opcional `voluntarioId`) |
+| GET | `/termos/:id` | Logado | Dados de um termo |
+| GET | `/termos/:id/pdf` | Logado | PDF do termo |
+| GET | `/termos/validar/:hash` | Público | Confere se o termo é autêntico (nome, horas e data de emissão) |
+| GET | `/dashboard` | Logado | Números da visão geral: status, horas por mês, inscrições e próximas oficinas |
 
 Rotas protegidas exigem o cabeçalho `Authorization: Bearer <token>`.
 
@@ -131,12 +155,14 @@ Abra http://localhost:5173. Em desenvolvimento, o Vite repassa as chamadas `/api
 | Tela | Acesso | O que faz |
 |---|---|---|
 | `/participar` | Público | Pré-cadastro com consentimento LGPD |
+| `/validar` e `/validar/:hash` | Público | Confere a autenticidade de um Termo de Voluntariado |
 | `/login` | Público | Login da coordenação (JWT) |
 | `/` | Logado | Números do projeto, gráfico de horas, inscrições e próximas oficinas |
-| `/voluntarios` | Logado | Lista com busca e filtros; detalhes, histórico e mudança de status |
+| `/voluntarios` | Logado | Lista com busca e filtros; detalhes, edição, histórico e mudança de status |
 | `/inscricoes` | Logado | Inscrições pendentes para aprovar ou rejeitar |
-| `/oficinas` | Logado | Agenda, nova oficina, vínculo de voluntários e conclusão/cancelamento |
-| `/termos` | Logado | Voluntários com participações e carga horária (PDF na próxima etapa) |
+| `/oficinas` | Logado | Agenda, criação e edição, vínculo de voluntários, ajuste de horas e conclusão/cancelamento |
+| `/termos` | Logado | Emissão do termo em PDF e lista de termos emitidos |
+| `/usuarios` | ADMIN | Cadastro, edição e desativação de coordenadores |
 
 Os botões de status mostram só as transições permitidas pela máquina de estados, mas quem valida de verdade é a API.
 
@@ -156,12 +182,18 @@ prisma/
   schema.prisma     modelagem do banco
   migrations/       histórico versionado do banco
   seed.js           cria o primeiro ADMIN
+  seed-demo.js      dados fictícios de demonstração
+test/
+  *.test.js         testes unitários
+  integracao/       testes de integração da API
 web/                front-end React
   src/pages/        uma tela por arquivo
   src/components/   menu lateral, tabelas, janelas e peças reutilizadas
   src/lib/          cliente da API e formatações
 docs/
   ER.md             diagrama entidade-relacionamento
+  regras-de-negocio.md  RN01 a RN09 e onde estão no código
+  DEPLOY.md         passo a passo do deploy
 docker-compose.yml  PostgreSQL local
 .env.example        modelo de variáveis de ambiente
 ```
