@@ -2,7 +2,7 @@
 // Rode com: npm test
 const test = require('node:test');
 const assert = require('node:assert/strict');
-const { podeTransitar, datasDaTransicao } = require('../src/services/fsm');
+const { podeTransitar, datasDaTransicao, oficinaPodeTransitar } = require('../src/services/fsm');
 const { totalHoras } = require('../src/services/horas');
 
 test('RN01: transições permitidas', () => {
@@ -37,4 +37,12 @@ test('RN05: soma só oficinas realizadas', () => {
   ];
   assert.equal(totalHoras(participacoes), 6.5);
   assert.equal(totalHoras([]), 0);
+});
+
+test('Oficina: só sai de PLANEJADA', () => {
+  assert.ok(oficinaPodeTransitar('PLANEJADA', 'REALIZADA'));
+  assert.ok(oficinaPodeTransitar('PLANEJADA', 'CANCELADA'));
+  assert.equal(oficinaPodeTransitar('REALIZADA', 'CANCELADA'), false);
+  assert.equal(oficinaPodeTransitar('CANCELADA', 'PLANEJADA'), false);
+  assert.equal(oficinaPodeTransitar('PLANEJADA', 'PLANEJADA'), false);
 });

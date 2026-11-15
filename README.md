@@ -105,6 +105,14 @@ Sistema web para controlar e automatizar os processos administrativos dos volunt
 | GET | `/voluntarios/:id` | Logado | Detalhes, disponibilidades, participações, histórico e total de horas |
 | PATCH | `/voluntarios/:id` | Logado | Edita dados e disponibilidades (o status não muda por aqui) |
 | PATCH | `/voluntarios/:id/status` | Logado | Muda o status (`para`, `observacao`) seguindo a máquina de estados |
+| GET | `/oficinas` | Logado | Lista com filtros: `busca` (tema ou local), `status`, `de`, `ate`, `ordem` |
+| GET | `/oficinas/:id` | Logado | Detalhes da oficina com os voluntários vinculados |
+| POST | `/oficinas` | Logado | Cria oficina (`tema`, `descricao`, `data`, `local`, `cargaHoraria`) |
+| PATCH | `/oficinas/:id` | Logado | Edita dados da oficina (não a cancelada) |
+| PATCH | `/oficinas/:id/status` | Logado | PLANEJADA → REALIZADA ou CANCELADA |
+| POST | `/oficinas/:id/participacoes` | Logado | Vincula voluntário ATIVO (`voluntarioId`, `papel`, `horasValidas`) |
+| PATCH | `/oficinas/:id/participacoes/:participacaoId` | Logado | Ajusta papel ou horas válidas |
+| DELETE | `/oficinas/:id/participacoes/:participacaoId` | Logado | Remove o vínculo (só em oficina PLANEJADA) |
 
 Rotas protegidas exigem o cabeçalho `Authorization: Bearer <token>`.
 

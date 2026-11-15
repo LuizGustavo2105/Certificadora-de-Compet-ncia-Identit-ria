@@ -18,4 +18,21 @@ function datasDaTransicao(para, agora = new Date()) {
   return {};
 }
 
-module.exports = { TRANSICOES, podeTransitar, datasDaTransicao };
+// Ciclo de vida da oficina: só sai de PLANEJADA; REALIZADA e CANCELADA são finais.
+const TRANSICOES_OFICINA = {
+  PLANEJADA: ['REALIZADA', 'CANCELADA'],
+  REALIZADA: [],
+  CANCELADA: [],
+};
+
+function oficinaPodeTransitar(de, para) {
+  return (TRANSICOES_OFICINA[de] || []).includes(para);
+}
+
+module.exports = {
+  TRANSICOES,
+  podeTransitar,
+  datasDaTransicao,
+  TRANSICOES_OFICINA,
+  oficinaPodeTransitar,
+};
