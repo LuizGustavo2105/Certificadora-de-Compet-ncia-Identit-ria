@@ -1,5 +1,9 @@
-# Sobe o PostgreSQL do SGV-ELLP na porta 5433 (a 5432 costuma estar ocupada).
-# Uso: docker compose up -d
+# Desenvolvimento: sobe só o PostgreSQL na porta 5433 (a 5432 costuma estar ocupada).
+#   docker compose up -d
+#
+# Demonstração completa (banco + API + site, com dados fictícios):
+#   docker compose --profile demo up --build
+#   Abra http://localhost:8080 (login na seção "Demonstração com Docker" do README).
 services:
   db:
     image: postgres:16
@@ -9,9 +13,37 @@ services:
       POSTGRES_PASSWORD: sgv123
       POSTGRES_DB: sgv_ellp
     ports:
-      - "5433:5432"
+      - "${DB_PORTA:-5433}:5432"
     volumes:
       - sgv_ellp_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U sgv -d sgv_ellp"]
+      interval: 3s
+      timeout: 3s
+      retries: 20
+
+  api:
+    profiles: ["demo"]
+    build: .
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgresql://sgv:sgv123@db:5432/sgv_ellp?schema=public
+      # Valores só para a demonstração local (nunca usar em produção)
+      JWT_SECRET: segredo-somente-para-demonstracao-local
+      JWT_EXPIRES_IN: 8h
+      FRONT_URL: http://localhost:${WEB_PORTA:-8080}
+      SEED_ADMIN_EMAIL: admin@ellp.exemplo
+      SEED_ADMIN_SENHA: demo-ellp-2026
+
+  web:
+    profiles: ["demo"]
+    build: ./web
+    depends_on:
+      - api
+    ports:
+      - "${WEB_PORTA:-8080}:80"
 
 volumes:
   sgv_ellp_data:

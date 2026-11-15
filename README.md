@@ -37,7 +37,26 @@ Sistema web para controlar e automatizar os processos administrativos dos volunt
 | Testes unitários e de integração | Prontos |
 | Deploy (Supabase, Render e Vercel) | Guia em [docs/DEPLOY.md](docs/DEPLOY.md) |
 
-## Pré-requisitos
+## Demonstração com Docker (um comando)
+
+Só é preciso ter o [Docker Desktop](https://www.docker.com/products/docker-desktop/) instalado e aberto. Na pasta do projeto:
+
+```bash
+docker compose --profile demo up --build
+```
+
+Na primeira vez leva alguns minutos (o Docker baixa as imagens). Quando aparecer `API do SGV-ELLP rodando`, abra **http://localhost:8080** e entre com:
+
+- E-mail: `admin@ellp.exemplo`
+- Senha: `demo-ellp-2026`
+
+O banco já vem com voluntários e oficinas **fictícios**. Para desligar: `Ctrl + C` e depois `docker compose --profile demo down`. Para apagar também os dados: `docker compose --profile demo down -v`.
+
+Esses dados de acesso valem só para a demonstração local. O passo a passo para testar todas as funcionalidades está em [docs/ROTEIRO-DE-TESTE.md](docs/ROTEIRO-DE-TESTE.md).
+
+> Se a porta 5433 ou 8080 já estiver em uso, troque na hora de subir. No PowerShell: `$env:DB_PORTA=5434; $env:WEB_PORTA=8081; docker compose --profile demo up --build`.
+
+## Pré-requisitos (desenvolvimento)
 
 - Node.js 18 ou superior
 - Docker Desktop
@@ -194,7 +213,9 @@ docs/
   ER.md             diagrama entidade-relacionamento
   regras-de-negocio.md  RN01 a RN09 e onde estão no código
   DEPLOY.md         passo a passo do deploy
-docker-compose.yml  PostgreSQL local
+  ROTEIRO-DE-TESTE.md  passo a passo para testar todas as funcionalidades
+Dockerfile          imagem da API (demonstração com Docker)
+docker-compose.yml  PostgreSQL local (e a demonstração completa com --profile demo)
 .env.example        modelo de variáveis de ambiente
 ```
 

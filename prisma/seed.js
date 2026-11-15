@@ -1,6 +1,6 @@
 // Cria o primeiro coordenador ADMIN. Rode com: npm run seed
 // Os dados vêm do .env (SEED_ADMIN_EMAIL e SEED_ADMIN_SENHA) para não deixar senha no código.
-require('dotenv').config();
+require('dotenv').config({ quiet: true });
 const bcrypt = require('bcrypt');
 const { PrismaClient } = require('@prisma/client');
 

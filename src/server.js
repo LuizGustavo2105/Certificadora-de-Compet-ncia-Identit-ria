@@ -1,5 +1,5 @@
 // Ponto de entrada: carrega o .env, confere variáveis obrigatórias e abre a porta.
-require('dotenv').config();
+require('dotenv').config({ quiet: true });
 
 if (!process.env.JWT_SECRET) {
   console.error('Defina JWT_SECRET no arquivo .env antes de iniciar a API.');
