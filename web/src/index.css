@@ -1,0 +1,83 @@
+/* Estilos globais. As cores vêm do protótipo feito no Lovable. */
+@import 'tailwindcss';
+
+/* Cada cor vira uma classe do Tailwind: bg-primary, text-muted-foreground, border-border... */
+@theme {
+  --font-sans: 'DM Sans', ui-sans-serif, system-ui, sans-serif;
+  --font-display: 'Manrope', ui-sans-serif, system-ui, sans-serif;
+
+  --color-background: oklch(98.2% 0.003 150);
+  --color-foreground: oklch(25% 0.022 165);
+  --color-card: oklch(100% 0 0);
+  --color-primary: oklch(46% 0.107 165);
+  --color-primary-hover: oklch(40% 0.1 165);
+  --color-primary-foreground: oklch(100% 0 0);
+  --color-secondary: oklch(95.2% 0.006 155);
+  --color-muted: oklch(96.5% 0.005 160);
+  --color-muted-foreground: oklch(55% 0.015 160);
+  --color-accent: oklch(94.3% 0.03 160);
+  --color-destructive: oklch(56% 0.18 25);
+  --color-destructive-soft: oklch(95.5% 0.03 25);
+  --color-border: oklch(91.1% 0.007 160);
+
+  --color-success: oklch(46% 0.107 165);
+  --color-success-soft: oklch(95% 0.035 155);
+  --color-warning: oklch(57% 0.13 74);
+  --color-warning-soft: oklch(97% 0.04 85);
+  --color-blue: oklch(53% 0.14 248);
+  --color-blue-soft: oklch(95% 0.025 248);
+  --color-rose: oklch(55% 0.12 10);
+  --color-rose-soft: oklch(95.5% 0.025 10);
+  --color-violet: oklch(57% 0.11 295);
+  --color-violet-soft: oklch(95.5% 0.025 295);
+
+  --color-hero: oklch(30% 0.061 165);
+  --color-hero-muted: oklch(85% 0.025 155);
+
+  --radius-card: 12px;
+}
+
+body {
+  background: var(--color-background);
+  color: var(--color-foreground);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+}
+
+h1,
+h2,
+h3 {
+  font-family: var(--font-display);
+}
+
+/* Componentes reutilizados em várias telas.
+   "@utility" cria uma classe nova que pode ser combinada com as do Tailwind. */
+@utility cartao {
+  @apply rounded-[var(--radius-card)] border border-border bg-card;
+}
+@utility eyebrow {
+  @apply text-[11px] font-semibold uppercase tracking-[0.12em] text-primary;
+}
+@utility campo {
+  @apply h-10 w-full rounded-md border border-border bg-card px-3 text-sm outline-none transition
+    placeholder:text-muted-foreground focus:border-primary focus:ring-2 focus:ring-primary/15;
+}
+@utility rotulo {
+  @apply mb-1.5 block text-sm font-medium;
+}
+@utility btn {
+  @apply inline-flex h-9 cursor-pointer items-center justify-center gap-2 whitespace-nowrap rounded-md px-4
+    text-sm font-medium transition disabled:cursor-not-allowed disabled:opacity-50 [&_svg]:size-4 [&_svg]:shrink-0;
+}
+@utility btn-primario {
+  @apply btn bg-primary text-primary-foreground hover:bg-primary-hover;
+}
+@utility btn-contorno {
+  @apply btn border border-border bg-card hover:bg-accent;
+}
+@utility btn-perigo {
+  @apply btn border border-destructive/30 bg-card text-destructive hover:bg-destructive-soft;
+}
+@utility btn-link {
+  @apply btn h-auto px-0 text-primary hover:underline;
+}

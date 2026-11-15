@@ -31,7 +31,7 @@ Sistema web para controlar e automatizar os processos administrativos dos volunt
 | Modelagem do banco (schema Prisma, 7 modelos) | Pronta |
 | Migration inicial aplicada | Pronta |
 | Servidor Express e API (usuários e JWT) | Em andamento (Sprint 2) |
-| Front-end React | Sprint 3 |
+| Front-end React (todas as telas, integrado à API) | Em andamento (Sprint 3) |
 | Máquina de estados, filtros e PDF com hash | Sprint 4 |
 
 ## Pré-requisitos
@@ -116,6 +116,30 @@ Sistema web para controlar e automatizar os processos administrativos dos volunt
 
 Rotas protegidas exigem o cabeçalho `Authorization: Bearer <token>`.
 
+## Front-end (pasta `web/`)
+
+React + Vite + Tailwind CSS, com o visual do protótipo feito no Lovable. Com a API rodando (`npm run dev` na raiz), em outro terminal:
+
+```bash
+cd web
+npm install
+npm run dev
+```
+
+Abra http://localhost:5173. Em desenvolvimento, o Vite repassa as chamadas `/api/...` para a API em http://localhost:3000, então não é preciso configurar nada. No deploy, defina `VITE_API_URL` com o endereço da API (veja `web/.env.example`).
+
+| Tela | Acesso | O que faz |
+|---|---|---|
+| `/participar` | Público | Pré-cadastro com consentimento LGPD |
+| `/login` | Público | Login da coordenação (JWT) |
+| `/` | Logado | Números do projeto, gráfico de horas, inscrições e próximas oficinas |
+| `/voluntarios` | Logado | Lista com busca e filtros; detalhes, histórico e mudança de status |
+| `/inscricoes` | Logado | Inscrições pendentes para aprovar ou rejeitar |
+| `/oficinas` | Logado | Agenda, nova oficina, vínculo de voluntários e conclusão/cancelamento |
+| `/termos` | Logado | Voluntários com participações e carga horária (PDF na próxima etapa) |
+
+Os botões de status mostram só as transições permitidas pela máquina de estados, mas quem valida de verdade é a API.
+
 ## Estrutura
 
 ```
@@ -132,6 +156,10 @@ prisma/
   schema.prisma     modelagem do banco
   migrations/       histórico versionado do banco
   seed.js           cria o primeiro ADMIN
+web/                front-end React
+  src/pages/        uma tela por arquivo
+  src/components/   menu lateral, tabelas, janelas e peças reutilizadas
+  src/lib/          cliente da API e formatações
 docs/
   ER.md             diagrama entidade-relacionamento
 docker-compose.yml  PostgreSQL local
