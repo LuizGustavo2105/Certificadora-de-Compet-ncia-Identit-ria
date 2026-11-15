@@ -9,25 +9,9 @@ import { Alerta, Avatar, Cabecalho, Pessoa, Selo, Vazio } from '../components/ui
 
 const MESES = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'];
 
-// Soma as horas válidas das oficinas realizadas em cada um dos últimos 6 meses.
-async function horasPorMes() {
-  const hoje = new Date();
-  const inicio = new Date(hoje.getFullYear(), hoje.getMonth() - 5, 1);
-  const meses = Array.from({ length: 6 }, (_, i) => {
-    const d = new Date(inicio.getFullYear(), inicio.getMonth() + i, 1);
-    return { chave: `${d.getFullYear()}-${d.getMonth()}`, rotulo: MESES[d.getMonth()], horas: 0 };
-  });
-
-  const realizadas = await api.listarOficinas({ status: 'REALIZADA', de: inicio.toISOString() });
-  // A listagem não traz as horas de cada participação, então buscamos os detalhes.
-  const detalhes = await Promise.all(realizadas.map((o) => api.buscarOficina(o.id)));
-  detalhes.forEach((o) => {
-    const d = new Date(o.data);
-    const mes = meses.find((m) => m.chave === `${d.getFullYear()}-${d.getMonth()}`);
-    if (mes) mes.horas += o.participacoes.reduce((s, p) => s + p.horasValidas, 0);
-  });
-  return meses;
-}
+// Converte [{ mes: "2026-11", horas }] da API no formato do gráfico.
+const paraGrafico = (lista) =>
+  lista.map((m) => ({ chave: m.mes, rotulo: MESES[Number(m.mes.slice(5)) - 1], horas: m.horas }));
 
 function Metrica({ icone: Icone, cor, rotulo, valor, detalhe }) {
   return (
@@ -64,34 +48,29 @@ function Grafico({ meses }) {
 }
 
 export default function VisaoGeral() {
-  const [voluntarios, setVoluntarios] = useState([]);
-  const [oficinas, setOficinas] = useState([]);
-  const [meses, setMeses] = useState([]);
+  const [dados, setDados] = useState(null);
   const [erro, setErro] = useState('');
 
+  // Todos os números vêm prontos de GET /dashboard, numa chamada só.
   useEffect(() => {
-    Promise.all([api.listarVoluntarios({ ordenar: 'criadoEm', ordem: 'desc' }), api.listarOficinas({ ordem: 'asc' }), horasPorMes()])
-      .then(([v, o, m]) => {
-        setVoluntarios(v);
-        setOficinas(o);
-        setMeses(m);
-      })
-      .catch((e) => setErro(e.message));
+    api.dashboard().then(setDados).catch((e) => setErro(e.message));
   }, []);
 
   const numeros = useMemo(() => {
-    const agora = new Date();
-    const ativos = voluntarios.filter((v) => v.status === 'ATIVO');
-    const pendentes = voluntarios.filter((v) => v.status === 'PENDENTE');
-    const proximas = oficinas.filter((o) => o.status === 'PLANEJADA' && new Date(o.data) >= agora);
+    if (!dados) return { ativos: 0, avatares: [], total: 0, pendentes: 0, realizadas: 0, planejadas: 0, horas: 0 };
     return {
-      ativos,
-      pendentes,
-      proximas,
-      realizadas: oficinas.filter((o) => o.status === 'REALIZADA').length,
-      horas: voluntarios.reduce((s, v) => s + v.totalHoras, 0),
+      ativos: dados.voluntarios.porStatus.ATIVO,
+      avatares: dados.voluntarios.ativos,
+      total: dados.voluntarios.total,
+      pendentes: dados.voluntarios.porStatus.PENDENTE,
+      realizadas: dados.oficinas.porStatus.REALIZADA,
+      planejadas: dados.oficinas.porStatus.PLANEJADA,
+      horas: dados.horasTotais,
     };
-  }, [voluntarios, oficinas]);
+  }, [dados]);
+  const meses = dados ? paraGrafico(dados.horasPorMes) : [];
+  const inscricoes = dados?.inscricoesRecentes || [];
+  const proximas = dados?.proximasOficinas || [];
 
   return (
     <>
@@ -102,9 +81,9 @@ export default function VisaoGeral() {
       <Alerta>{erro}</Alerta>
 
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        <Metrica icone={Users} cor="bg-accent text-primary" rotulo="Voluntários ativos" valor={numeros.ativos.length} detalhe={`${voluntarios.length} cadastrados no total`} />
-        <Metrica icone={ClipboardList} cor="bg-warning-soft text-warning" rotulo="Inscrições pendentes" valor={numeros.pendentes.length} detalhe="aguardando sua análise" />
-        <Metrica icone={GraduationCap} cor="bg-blue-soft text-blue" rotulo="Oficinas realizadas" valor={numeros.realizadas} detalhe={`${numeros.proximas.length} próximas oficinas`} />
+        <Metrica icone={Users} cor="bg-accent text-primary" rotulo="Voluntários ativos" valor={numeros.ativos} detalhe={`${numeros.total} cadastrados no total`} />
+        <Metrica icone={ClipboardList} cor="bg-warning-soft text-warning" rotulo="Inscrições pendentes" valor={numeros.pendentes} detalhe="aguardando sua análise" />
+        <Metrica icone={GraduationCap} cor="bg-blue-soft text-blue" rotulo="Oficinas realizadas" valor={numeros.realizadas} detalhe={`${numeros.planejadas} programadas`} />
         <Metrica icone={Clock3} cor="bg-violet-soft text-violet" rotulo="Horas de voluntariado" valor={formatarHoras(numeros.horas)} detalhe="de dedicação ao projeto" />
       </div>
 
@@ -127,12 +106,12 @@ export default function VisaoGeral() {
             </p>
             <div className="mt-5 flex items-center justify-between gap-3">
               <div className="flex -space-x-2">
-                {numeros.ativos.slice(0, 4).map((v) => (
+                {numeros.avatares.slice(0, 4).map((v) => (
                   <span key={v.id} className="rounded-full ring-2 ring-hero"><Avatar nome={v.nome} /></span>
                 ))}
-                {numeros.ativos.length > 4 && (
+                {numeros.ativos > 4 && (
                   <span className="grid size-9 place-items-center rounded-full bg-white/20 text-xs font-semibold ring-2 ring-hero">
-                    +{numeros.ativos.length - 4}
+                    +{numeros.ativos - 4}
                   </span>
                 )}
               </div>
@@ -151,11 +130,11 @@ export default function VisaoGeral() {
             </div>
             <Link to="/inscricoes" className="btn-link">Ver todas</Link>
           </div>
-          {numeros.pendentes.length === 0 ? (
+          {inscricoes.length === 0 ? (
             <Vazio>Nenhuma inscrição pendente.</Vazio>
           ) : (
             <ul>
-              {numeros.pendentes.slice(0, 5).map((v) => (
+              {inscricoes.map((v) => (
                 <li key={v.id} className="flex items-center justify-between gap-3 border-t border-border px-6 py-3">
                   <Pessoa nome={v.nome} detalhe={v.curso || v.email} />
                   <div className="flex items-center gap-4">
@@ -167,7 +146,7 @@ export default function VisaoGeral() {
             </ul>
           )}
           <p className="border-t border-border px-6 py-3 text-xs text-muted-foreground">
-            {numeros.pendentes.length} inscrições aguardando aprovação
+            {numeros.pendentes} inscrições aguardando aprovação
           </p>
         </section>
 
@@ -179,11 +158,11 @@ export default function VisaoGeral() {
             </div>
             <Link to="/oficinas" className="btn-link">Ver agenda</Link>
           </div>
-          {numeros.proximas.length === 0 ? (
+          {proximas.length === 0 ? (
             <Vazio>Nenhuma oficina programada.</Vazio>
           ) : (
             <ul className="space-y-3">
-              {numeros.proximas.slice(0, 3).map((o) => {
+              {proximas.map((o) => {
                 const d = new Date(o.data);
                 return (
                   <li key={o.id}>

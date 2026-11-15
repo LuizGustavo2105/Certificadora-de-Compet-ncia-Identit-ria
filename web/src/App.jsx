@@ -9,6 +9,8 @@ import Voluntarios from './pages/Voluntarios';
 import Inscricoes from './pages/Inscricoes';
 import Oficinas from './pages/Oficinas';
 import Termos from './pages/Termos';
+import Usuarios from './pages/Usuarios';
+import Validar from './pages/Validar';
 
 function RotaProtegida({ children }) {
   const { usuario, carregando } = useAuth();
@@ -18,11 +20,19 @@ function RotaProtegida({ children }) {
   return children;
 }
 
+// Só ADMIN vê a tela de usuários (a API também bloqueia os outros perfis).
+function SomenteAdmin({ children }) {
+  const { usuario } = useAuth();
+  return usuario?.perfil === 'ADMIN' ? children : <Navigate to="/" replace />;
+}
+
 export default function App() {
   return (
     <Routes>
       <Route path="/participar" element={<Participar />} />
       <Route path="/login" element={<Login />} />
+      <Route path="/validar" element={<Validar />} />
+      <Route path="/validar/:hash" element={<Validar />} />
       <Route
         element={
           <RotaProtegida>
@@ -35,6 +45,7 @@ export default function App() {
         <Route path="inscricoes" element={<Inscricoes />} />
         <Route path="oficinas" element={<Oficinas />} />
         <Route path="termos" element={<Termos />} />
+        <Route path="usuarios" element={<SomenteAdmin><Usuarios /></SomenteAdmin>} />
       </Route>
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>

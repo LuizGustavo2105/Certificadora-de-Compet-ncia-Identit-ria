@@ -1,7 +1,7 @@
 // Tela /oficinas: agenda de oficinas, criação e vínculo de voluntários (M:N).
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { CalendarDays, Clock3, MapPin, Plus, Trash2, Users } from 'lucide-react';
-import { api } from '../lib/api';
+import { CalendarDays, Clock3, MapPin, Pencil, Plus, Trash2, Users } from 'lucide-react';
+import { api, mensagemDeErro } from '../lib/api';
 import { PAPEIS, formatarData, formatarDataHora, formatarHoras } from '../lib/formatos';
 import { Alerta, Cabecalho, Modal, Pessoa, Selo, Vazio } from '../components/ui';
 
@@ -78,44 +78,74 @@ export default function Oficinas() {
         </div>
       )}
 
-      <NovaOficina aberto={criando} aoFechar={() => setCriando(false)} aoCriar={carregar} />
+      <FormOficina aberto={criando} aoFechar={() => setCriando(false)} aoSalvar={carregar} />
       <OficinaDetalhe id={aberta} aoFechar={() => setAberta(null)} aoAlterar={carregar} />
     </>
   );
 }
 
-function NovaOficina({ aberto, aoFechar, aoCriar }) {
+// ISO (UTC) -> "2026-11-20T14:00" no horário do navegador, formato do campo datetime-local.
+function paraCampoData(iso) {
+  const d = new Date(iso);
+  return new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().slice(0, 16);
+}
+
+// Cria (sem "oficina") ou edita (com "oficina") uma oficina.
+function FormOficina({ aberto, aoFechar, aoSalvar, oficina }) {
   const vazio = { tema: '', descricao: '', data: '', local: '', cargaHoraria: '' };
   const [form, setForm] = useState(vazio);
   const [erro, setErro] = useState('');
   const [salvando, setSalvando] = useState(false);
   const alterar = (c) => (e) => setForm({ ...form, [c]: e.target.value });
 
+  useEffect(() => {
+    if (!aberto) return;
+    setErro('');
+    setForm(
+      oficina
+        ? {
+            tema: oficina.tema,
+            descricao: oficina.descricao || '',
+            data: paraCampoData(oficina.data),
+            local: oficina.local,
+            cargaHoraria: String(oficina.cargaHoraria),
+          }
+        : vazio,
+    );
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [aberto, oficina]);
+
   async function salvar(e) {
     e.preventDefault();
     setErro('');
     setSalvando(true);
     try {
-      await api.criarOficina({
+      const dados = {
         tema: form.tema,
         descricao: form.descricao || undefined,
         // O campo datetime-local está no horário do navegador; enviamos em ISO (UTC).
         data: new Date(form.data).toISOString(),
         local: form.local,
         cargaHoraria: Number(form.cargaHoraria),
-      });
-      setForm(vazio);
+      };
+      if (oficina) await api.atualizarOficina(oficina.id, dados);
+      else await api.criarOficina(dados);
       aoFechar();
-      aoCriar();
+      aoSalvar();
     } catch (err) {
-      setErro(err.detalhes.length ? err.detalhes.map((d) => d.mensagem).join('. ') : err.message);
+      setErro(mensagemDeErro(err));
     } finally {
       setSalvando(false);
     }
   }
 
   return (
-    <Modal titulo="Nova oficina" subtitulo="Ela começa como Programada." aberto={aberto} aoFechar={aoFechar}>
+    <Modal
+      titulo={oficina ? 'Editar oficina' : 'Nova oficina'}
+      subtitulo={oficina ? 'O status muda pelos botões da oficina.' : 'Ela começa como Programada.'}
+      aberto={aberto}
+      aoFechar={aoFechar}
+    >
       <form onSubmit={salvar} className="space-y-4">
         <div>
           <label className="rotulo" htmlFor="tema">Tema *</label>
@@ -143,7 +173,7 @@ function NovaOficina({ aberto, aoFechar, aoCriar }) {
         <div className="flex justify-end gap-2">
           <button type="button" className="btn-contorno" onClick={aoFechar}>Cancelar</button>
           <button className="btn-primario" disabled={salvando || !form.tema || !form.data || !form.local || !form.cargaHoraria}>
-            {salvando ? 'Salvando…' : 'Criar oficina'}
+            {salvando ? 'Salvando…' : oficina ? 'Salvar alterações' : 'Criar oficina'}
           </button>
         </div>
       </form>
@@ -157,6 +187,7 @@ function OficinaDetalhe({ id, aoFechar, aoAlterar }) {
   const [vinculo, setVinculo] = useState({ voluntarioId: '', papel: 'MINISTRANTE' });
   const [erro, setErro] = useState('');
   const [salvando, setSalvando] = useState(false);
+  const [editando, setEditando] = useState(false);
 
   const carregar = useCallback(() => {
     api.buscarOficina(id).then(setOficina).catch((e) => setErro(e.message));
@@ -180,7 +211,7 @@ function OficinaDetalhe({ id, aoFechar, aoAlterar }) {
       carregar();
       aoAlterar();
     } catch (e) {
-      setErro(e.message);
+      setErro(mensagemDeErro(e));
     } finally {
       setSalvando(false);
     }
@@ -201,6 +232,11 @@ function OficinaDetalhe({ id, aoFechar, aoAlterar }) {
             <span className="flex items-center gap-1.5"><CalendarDays className="size-4" /> {formatarDataHora(oficina.data)}</span>
             <span className="flex items-center gap-1.5"><MapPin className="size-4" /> {oficina.local}</span>
             <span className="flex items-center gap-1.5"><Clock3 className="size-4" /> {formatarHoras(oficina.cargaHoraria)}</span>
+            {!cancelada && (
+              <button className="btn-contorno ml-auto h-8" onClick={() => setEditando(true)}>
+                <Pencil /> Editar
+              </button>
+            )}
           </div>
           {oficina.descricao && <p className="text-sm">{oficina.descricao}</p>}
 
@@ -212,7 +248,19 @@ function OficinaDetalhe({ id, aoFechar, aoAlterar }) {
               <ul className="divide-y divide-border rounded-lg border border-border">
                 {oficina.participacoes.map((p) => (
                   <li key={p.id} className="flex items-center justify-between gap-3 px-4 py-2.5">
-                    <Pessoa nome={p.voluntario.nome} detalhe={`${PAPEIS[p.papel]} · ${formatarHoras(p.horasValidas)}`} />
+                    <Pessoa nome={p.voluntario.nome} detalhe={PAPEIS[p.papel]} />
+                    <div className="ml-auto">
+                      {cancelada ? (
+                        <span className="text-sm text-muted-foreground">{formatarHoras(p.horasValidas)}</span>
+                      ) : (
+                        <HorasEditaveis
+                          valor={p.horasValidas}
+                          maximo={oficina.cargaHoraria}
+                          desabilitado={salvando}
+                          aoSalvar={(horasValidas) => executar(() => api.atualizarParticipacao(oficina.id, p.id, { horasValidas }))}
+                        />
+                      )}
+                    </div>
                     {planejada && (
                       <button
                         className="btn h-8 px-2 text-muted-foreground hover:text-destructive"
@@ -288,6 +336,52 @@ function OficinaDetalhe({ id, aoFechar, aoAlterar }) {
         </div>
       )}
       <div className="mt-4"><Alerta>{erro}</Alerta></div>
+      {editando && (
+        <FormOficina
+          aberto
+          oficina={oficina}
+          aoFechar={() => setEditando(false)}
+          aoSalvar={() => {
+            carregar();
+            aoAlterar();
+          }}
+        />
+      )}
     </Modal>
+  );
+}
+
+// Campo de horas válidas de um participante: salva ao sair do campo ou apertar Enter.
+// Ex.: o voluntário saiu mais cedo e deve receber menos horas (nunca mais que a carga da oficina).
+function HorasEditaveis({ valor, maximo, desabilitado, aoSalvar }) {
+  const [texto, setTexto] = useState(String(valor));
+  useEffect(() => setTexto(String(valor)), [valor]);
+
+  function confirmar() {
+    const n = Number(texto.replace(',', '.'));
+    if (texto === '' || Number.isNaN(n) || n === valor) {
+      setTexto(String(valor));
+      return;
+    }
+    aoSalvar(n);
+  }
+
+  return (
+    <label className="flex items-center gap-1.5 text-sm text-muted-foreground" title={`Horas válidas (máximo ${maximo} h)`}>
+      <input
+        type="number"
+        min="0"
+        max={maximo}
+        step="0.5"
+        className="campo h-8 w-20 text-right"
+        value={texto}
+        disabled={desabilitado}
+        onChange={(e) => setTexto(e.target.value)}
+        onBlur={confirmar}
+        onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), e.currentTarget.blur())}
+        aria-label="Horas válidas"
+      />
+      h
+    </label>
   );
 }

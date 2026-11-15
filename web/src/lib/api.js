@@ -68,12 +68,54 @@ export const api = {
   mudarStatusVoluntario: (id, para, observacao) =>
     requisitar('PATCH', `/voluntarios/${id}/status`, { para, observacao: observacao || undefined }),
 
+  atualizarVoluntario: (id, dados) => requisitar('PATCH', `/voluntarios/${id}`, dados),
+
   // Oficinas e vínculos (M:N)
   listarOficinas: (filtros) => requisitar('GET', `/oficinas${consulta(filtros)}`),
   buscarOficina: (id) => requisitar('GET', `/oficinas/${id}`),
   criarOficina: (dados) => requisitar('POST', '/oficinas', dados),
+  atualizarOficina: (id, dados) => requisitar('PATCH', `/oficinas/${id}`, dados),
   mudarStatusOficina: (id, para) => requisitar('PATCH', `/oficinas/${id}/status`, { para }),
   vincular: (oficinaId, dados) => requisitar('POST', `/oficinas/${oficinaId}/participacoes`, dados),
+  atualizarParticipacao: (oficinaId, participacaoId, dados) =>
+    requisitar('PATCH', `/oficinas/${oficinaId}/participacoes/${participacaoId}`, dados),
   desvincular: (oficinaId, participacaoId) =>
     requisitar('DELETE', `/oficinas/${oficinaId}/participacoes/${participacaoId}`),
+
+  // Visão geral
+  dashboard: () => requisitar('GET', '/dashboard'),
+
+  // Termos de voluntariado
+  listarTermos: (filtros) => requisitar('GET', `/termos${consulta(filtros)}`),
+  emitirTermo: (voluntarioId) => requisitar('POST', '/termos', { voluntarioId }),
+  baixarPdfTermo: (id) => baixar(`/termos/${id}/pdf`),
+  validarTermo: (hash) => requisitar('GET', `/termos/validar/${encodeURIComponent(hash)}`),
+
+  // Usuários do painel (somente ADMIN)
+  listarUsuarios: () => requisitar('GET', '/usuarios'),
+  criarUsuario: (dados) => requisitar('POST', '/usuarios', dados),
+  atualizarUsuario: (id, dados) => requisitar('PATCH', `/usuarios/${id}`, dados),
 };
+
+// Arquivos (PDF): mesma autenticação, mas a resposta é um Blob em vez de JSON.
+async function baixar(caminho) {
+  const t = token.ler();
+  const resposta = await fetch(BASE + caminho, { headers: t ? { Authorization: `Bearer ${t}` } : {} });
+  if (!resposta.ok) {
+    const dados = await resposta.json().catch(() => null);
+    if (resposta.status === 401 && t) aoExpirar();
+    throw new ErroApi(resposta.status, dados);
+  }
+  return resposta.blob();
+}
+
+// Abre um Blob (ex.: o PDF) numa nova aba do navegador.
+export function abrirArquivo(blob) {
+  const url = URL.createObjectURL(blob);
+  window.open(url, '_blank', 'noopener');
+  setTimeout(() => URL.revokeObjectURL(url), 60_000);
+}
+
+// Junta a mensagem de erro com os detalhes do zod, se houver.
+export const mensagemDeErro = (e) =>
+  e?.detalhes?.length ? e.detalhes.map((d) => d.mensagem).join('. ') : e?.message || 'Erro inesperado';

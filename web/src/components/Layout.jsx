@@ -11,6 +11,7 @@ import {
   LayoutDashboard,
   LogOut,
   Menu,
+  UserCog,
   Users,
   X,
 } from 'lucide-react';
@@ -25,6 +26,7 @@ const MENU = [
   { para: '/inscricoes', rotulo: 'Inscrições', icone: ClipboardList, contador: true },
   { para: '/oficinas', rotulo: 'Oficinas', icone: CalendarDays },
   { para: '/termos', rotulo: 'Termos e relatórios', icone: FileText },
+  { para: '/usuarios', rotulo: 'Usuários', icone: UserCog, somenteAdmin: true },
 ];
 
 const PERFIS = { ADMIN: 'Administrador', COORDENADOR: 'Coordenador' };
@@ -92,7 +94,7 @@ export default function Layout() {
           Espaço de gestão
         </p>
         <nav className="flex flex-col gap-0.5">
-          {MENU.map(({ para, rotulo, icone: Icone, contador }) => (
+          {MENU.filter((m) => !m.somenteAdmin || usuario?.perfil === 'ADMIN').map(({ para, rotulo, icone: Icone, contador }) => (
             <NavLink
               key={para}
               to={para}
