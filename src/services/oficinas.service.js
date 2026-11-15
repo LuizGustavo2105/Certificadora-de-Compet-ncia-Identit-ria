@@ -62,6 +62,7 @@ async function mudarStatus(id, { para }) {
 // ---------- Participações (M:N) ----------
 
 async function vincular(oficinaId, { voluntarioId, papel, horasValidas }) {
+  // RN08: oficina cancelada não recebe vínculos e só voluntário ATIVO pode ser vinculado.
   const oficina = await buscarPorId(oficinaId);
   if (oficina.status === 'CANCELADA') {
     throw new ErroApp(422, 'Não é possível vincular voluntários a uma oficina cancelada');
@@ -110,7 +111,7 @@ async function atualizarParticipacao(oficinaId, participacaoId, dados) {
   return prisma.participacao.update({ where: { id: participacaoId }, data: dados });
 }
 
-// Só dá para desfazer o vínculo enquanto a oficina está PLANEJADA (correção de engano).
+// RN09: só dá para desfazer o vínculo enquanto a oficina está PLANEJADA (correção de engano).
 // Depois de realizada, a participação faz parte do histórico e conta para o termo.
 async function desvincular(oficinaId, participacaoId) {
   const { oficina } = await buscarParticipacao(oficinaId, participacaoId);

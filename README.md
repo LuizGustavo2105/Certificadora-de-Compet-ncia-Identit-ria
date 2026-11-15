@@ -152,6 +152,8 @@ Veja o diagrama em [docs/ER.md](docs/ER.md). Resumo:
 
 Ciclo de vida do voluntário: PENDENTE → APROVADO → ATIVO → DESLIGADO (uma inscrição pendente também pode ser rejeitada, indo direto para DESLIGADO).
 
+As regras de negócio (RN01 a RN09) estão em [docs/regras-de-negocio.md](docs/regras-de-negocio.md).
+
 ## Fluxo de trabalho
 
 - A branch `main` só recebe código revisado.
