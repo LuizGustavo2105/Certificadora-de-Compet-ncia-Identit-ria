@@ -100,6 +100,11 @@ Sistema web para controlar e automatizar os processos administrativos dos volunt
 | POST | `/usuarios` | ADMIN | Cria um usuário (`nome`, `email`, `senha`, `perfil`) |
 | PATCH | `/usuarios/:id` | ADMIN | Altera dados, senha, perfil ou `ativo` |
 | DELETE | `/usuarios/:id` | ADMIN | Desativa o usuário (não apaga) |
+| POST | `/voluntarios/pre-cadastro` | Público | Pré-cadastro com consentimento LGPD (entra como PENDENTE) |
+| GET | `/voluntarios` | Logado | Lista com filtros: `busca`, `status`, `interesse`, `diaSemana`, `ordenar` (nome, criadoEm, horas), `ordem` (asc, desc) |
+| GET | `/voluntarios/:id` | Logado | Detalhes, disponibilidades, participações, histórico e total de horas |
+| PATCH | `/voluntarios/:id` | Logado | Edita dados e disponibilidades (o status não muda por aqui) |
+| PATCH | `/voluntarios/:id/status` | Logado | Muda o status (`para`, `observacao`) seguindo a máquina de estados |
 
 Rotas protegidas exigem o cabeçalho `Authorization: Bearer <token>`.
 

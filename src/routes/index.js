@@ -5,5 +5,6 @@ const router = Router();
 
 router.use('/auth', require('./auth.routes'));
 router.use('/usuarios', require('./usuarios.routes'));
+router.use('/voluntarios', require('./voluntarios.routes'));
 
 module.exports = router;
