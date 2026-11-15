@@ -1,0 +1,17 @@
+# Sobe o PostgreSQL do SGV-ELLP na porta 5433 (a 5432 costuma estar ocupada).
+# Uso: docker compose up -d
+services:
+  db:
+    image: postgres:16
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: sgv
+      POSTGRES_PASSWORD: sgv123
+      POSTGRES_DB: sgv_ellp
+    ports:
+      - "5433:5432"
+    volumes:
+      - sgv_ellp_data:/var/lib/postgresql/data
+
+volumes:
+  sgv_ellp_data:
