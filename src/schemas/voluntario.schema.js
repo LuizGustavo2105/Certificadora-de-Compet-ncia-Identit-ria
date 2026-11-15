@@ -12,13 +12,18 @@ const disponibilidadeSchema = z
   // "HH:mm" com dois dígitos pode ser comparado como texto
   .refine((d) => d.horaInicio < d.horaFim, 'A hora de início deve ser antes da hora de fim');
 
+// Texto opcional: em branco vira null. Importante para o RA, que é único no banco:
+// dois voluntários com RA "" dariam erro de duplicado; com null, não.
+const textoOpcional = (max) =>
+  z.string().trim().max(max).nullish().transform((v) => (v ? v : null));
+
 const camposVoluntario = {
   nome: z.string().trim().min(3, 'Nome muito curto'),
   email: z.string().trim().toLowerCase().email('E-mail inválido'),
-  telefone: z.string().trim().max(20).optional(),
-  ra: z.string().trim().max(20).optional(),
-  curso: z.string().trim().max(100).optional(),
-  periodo: z.number().int().min(1).max(12).optional(),
+  telefone: textoOpcional(20),
+  ra: textoOpcional(20),
+  curso: textoOpcional(100),
+  periodo: z.number().int().min(1).max(12).nullish(),
   interesses: z.array(z.string().trim().min(1)).max(20).default([]),
   disponibilidades: z.array(disponibilidadeSchema).max(21).default([]),
 };
