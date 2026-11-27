@@ -35,7 +35,14 @@ Sistema web para controlar e automatizar os processos administrativos dos volunt
 | Máquina de estados, filtros e PDF com hash | Pronta |
 | Front-end React (todas as telas, integrado à API) | Pronto |
 | Testes unitários e de integração | Prontos |
-| Deploy (Supabase, Render e Vercel) | Guia em [docs/DEPLOY.md](docs/DEPLOY.md) |
+| Deploy (Supabase, Render e Vercel) | Publicado: https://sgv-ellp.vercel.app |
+
+## Acesso online
+
+- **Site:** https://sgv-ellp.vercel.app
+- **API (verificação):** https://sgv-ellp-api.onrender.com/health
+- A conta de teste foi enviada junto com a entrega.
+- A API roda no plano gratuito do Render e "dorme" após 15 minutos sem uso: o primeiro acesso pode levar até 1 minuto. Se o site não carregar, use a demonstração com Docker abaixo.
 
 ## Demonstração com Docker (um comando)
 
